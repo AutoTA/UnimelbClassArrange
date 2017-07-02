@@ -10,7 +10,7 @@ import java.sql.Time;
 /**
  * Created by Administrator on 2017/6/30.
  */
-public class TimetableArrangement {
+public class TimetableArrangement {	
     //initial setting
     public static String driver = "com.mysql.jdbc.Driver";
     public static String url = "jdbc:mysql://localhost:3306/subjecttimetable?characterEncoding=utf8&useSSL=false";
@@ -21,6 +21,9 @@ public class TimetableArrangement {
     public static ResultSet rs;
 
     public static void connect(){
+    	/**
+    	 * This function used to connect to the local database
+    	 */
         //locate the driver
         try{
             Class.forName(driver);
@@ -37,27 +40,38 @@ public class TimetableArrangement {
         }
     }
 
-    public static ResultSet fetchdata() {
+    public static ResultSet fetchData(String subject) {
+    	//used to read single subject data
         try{
             stmt = con.createStatement(); //what is this line?
-            String sql = "select * from MAST20009";
+            String sql = "select * from " + subject;
+            System.out.println(sql);
             ResultSet rs = stmt.executeQuery(sql);
             return rs;
         }catch (Exception e){
-            System.out.println("Fetching data fail");
+            System.out.println("Subject infomation not avaiable in database");
+            return null;
         }
-        return rs;
     }
 
-    public static void printdata(ResultSet rs){
-        System.out.println("Print out the result fromd database");
-
+    public static Classtype[] storeData(ResultSet rs){
+    	/**
+    	 * This function takes an single subject's database as input
+    	 * And read each record one by one
+    	 * And output An array of Record object
+    	 */
+        System.out.println("Transfer data from databse to array");
         String classtype = null;
         String weekday = null;
         Time start = null;
         Time end = null;
         String location = null;
-        int semester = 0;
+        
+        //assume each subject only have 4 types of class
+        //0 is lecture type, 1 is practical, 2 is workshop
+        Classtype[] classtypes = new Classtype[5]; 
+        
+        int i = 0;
         try{
             while (rs.next()){
                 classtype = rs.getString("classtype");
@@ -65,19 +79,61 @@ public class TimetableArrangement {
                 start = rs.getTime("start");
                 end = rs.getTime("end");
                 location = rs.getString("location");
-                System.out.println(classtype +" "+ weekday+" "+start+" "+end+" "+location);
+                Record data = new Record(classtype, weekday, start, end, location);
+                subjectData[i++] = data;            
             }
             rs.close();
-            con.close();
+            return subjectData;
         }catch(SQLException e){
-            System.out.println("Searching info fail");
+            System.out.println("Data not avaiable in database");
+            return null;
+        }catch(Exception e) {
+        	e.printStackTrace();
+        	return null;
         }
     }
 
-
-    public static void main(String[] args){
-       connect();
-       rs = fetchdata();
-       printdata(rs);
+    public static subjectRecords[] fetchAllSubjectTimeslots(String[] subjectList) {
+    	 Subject[] subjects = new Subject[6];
+         for (int i = 0; i < subjectList.length; i++)
+      	   
     }
+    
+    public static class Lesson{
+    	Time start;
+    	Time end;
+    	String location;
+    }
+    
+    public static class Classtype{
+    	Classtype{
+    		this.lessons = new 
+    	}
+    	Lesson[] lessons;
+    }
+    
+    public static class Subject{
+    	Classtype[] classtypes;
+    }
+    
+    
+     
+    public static void main(String[] args) {
+       connect();
+       
+       //reading the data from database
+       String[] subjectList = {"MAST20009", "MAST30028"};                                                       
+       subjectRecords[] allRecords = fetchAllSubjectTimeslots(subjectList);
+      
+       //close the connection to the SQL
+       try {
+    	   con.close();
+       }catch (Exception e) {
+    	   System.out.println("SQL database connection has already close");
+       }
+       
+       //processing the data
+       
+       
+    }   
 }

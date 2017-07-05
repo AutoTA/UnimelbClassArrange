@@ -99,6 +99,11 @@ public class TimetableArrangement {
                 	subject.classtypes.add(new Classtype());  	
                 	subject.classtypes.get(i).lessons.add(lesson_info);
                 	subject.classtypes.get(i).type = classtype;
+                	if (classtype.substring(0,7).equals("Lecture")){
+                		subject.classtypes.get(i).isLecture = true;
+                	}else {
+                		subject.classtypes.get(i).isLecture = false;
+                	}
                 }
             }
             rs.close();
@@ -128,8 +133,105 @@ public class TimetableArrangement {
     }
     
     //3 rearrange the subject to generate the timetable
-    
+    public static Timetable arrangeTable(Subject[] subjects) {
+    	Timetable timetable = new Timetable();
+    	System.out.println("Start Arrange class timetable");
     	
+    	//Assign Lecture time to timetable
+    	for(int i = 0; i < subjects.length; i++) {
+    		Subject subject = subjects[i];
+    		assignSubjectLectures(subject, timetable);
+    		
+    	}
+    	
+    	//remove clashed with lectures
+    	for (int i = 0; i < subjects.length; i++) {
+    		Subject subject = subjects[i];
+    		removeClashedLessons(subject, timetable);
+    	}
+    	
+    	//Assign the classes
+    	for(int i = 0; i < subjects.length; i++) {
+    		Subject subject = subjects[i];
+    		assignLesson(subject, timetable);
+    		
+    	}
+    	
+    	return timetable;
+    }
+    
+    public static void assignLesson(Subject subject, Timetable timetable) {
+    	for (int i = 0; i < subject.classtypes.size();i++) {
+    		Classtype classtype = subject.classtypes.get(i);
+    		if (!classtype.isLecture) {
+    			for (int j = 0; i < classtype.lessons.size();i++) {
+        			Lesson lesson = classtype.lessons.get(j);
+        			if (!lessonClashed(lesson, timetable)) {
+        				timetable.week[lesson.day].lessons.add(lesson);
+        				continue;
+        			}else {
+        				System.out.println("cannot insert" + lesson.subject + " " + lesson.classtype);
+        			}
+        		}    			
+    		}
+    	}
+    }
+    
+    
+    public static void removeClashedLessons (Subject subject, Timetable timetable) {
+    	//Take a specific class type as input
+    	//if it is other class, we have more option
+    	
+		//go through every candidate class
+    	for (int i = 0; i < subject.classtypes.size();i++) {
+    		Classtype classtype = subject.classtypes.get(i);
+    		for (int j = 0; j < classtype.lessons.size(); j++) {
+    			Lesson lesson = classtype.lessons.get(j);
+    			if (lessonClashed(lesson, timetable)) {
+    				classtype.lessons.remove(j);
+    			}
+    			//Expect to Remove More Restriction Given User's Restriction
+    		}
+    	}
+    }
+    
+    public static void assignSubjectLectures(Subject subject, Timetable timetable) {
+    	//go through every classtype of this subject
+		for (int j = 0; j < subject.classtypes.size(); j++) {
+			Classtype classtype = subject.classtypes.get(j);
+			
+			//if it is a lecture type, assigned to the timetable first
+			if (classtype.isLecture) {
+				Lesson lesson = classtype.lessons.get(0); //by default we only care about stream 1
+				timetable.week[lesson.day].lessons.add(lesson);
+			}
+		}
+    	
+    }
+
+    public static boolean lessonClashed(Lesson lesson, Timetable timetable) {
+    	float start = Float.parseFloat(lesson.start.toString().substring(0,5).replace(":", "."));
+    	float end = Float.parseFloat(lesson.end.toString().substring(0,5).replace(":", "."));
+    	
+    	for(int i = 0; i < timetable.week[lesson.day].lessons.size();i++) {
+    		Lesson existing_lesson = timetable.week[lesson.day].lessons.get(i);
+    		float exist_start = Float.parseFloat(
+    				existing_lesson.start.toString().substring(0,5).replace(":", "."));
+    		float exist_end = Float.parseFloat(
+    				existing_lesson.end.toString().substring(0,5).replace(":", "."));
+    		if (start > exist_start && start < exist_end) {
+    			return true;
+    		}
+    		if (end > exist_start && end < exist_end) {
+    			return true;
+    		}	
+    		if (start == exist_start && end == exist_end) {
+    			return true;
+    		}
+    	}
+    	return false;
+    }
+    
     //Finally execute all the program
     public static void main(String[] args) {
        connect();
@@ -137,7 +239,6 @@ public class TimetableArrangement {
        //reading the data from database
        String[] subjectList = {"MAST20009", "MAST30028"};                                                       
        Subject[] subjects = storeAllSubjects(subjectList);
-       showSubjects(subjects);
       
        //close the connection to the SQL
        try {
@@ -147,7 +248,8 @@ public class TimetableArrangement {
        }
        
        //processing the data
-       
+       Timetable timetable = arrangeTable(subjects);
+       showTimetable(timetable);
     }   
     
     
@@ -168,7 +270,54 @@ public class TimetableArrangement {
     	}
     }
     
-    //basic class setting for the program
+    public static void showTimetable(Timetable timetable) {
+    	for(int i = 0; i < timetable.week.length; i++) {
+    		Day day = timetable.week[i];
+    		for (int j = 0; j < day.lessons.size();j++) {
+    			Lesson lesson = day.lessons.get(j);
+    			lesson.print_info();
+    		}
+    	}
+    }
+    
+    //basic class for program
+    
+    public static class UserRestriction{
+    	float wakeup;
+    	float backhome;
+    }
+    
+    public static class Timetable{
+    	Timetable(){
+    		for (int i = 0; i < 5; i++) {
+    			this.week[i] = new Day(i);
+    		}
+    	}
+    	
+    	//After assign the space, each object need to be initialised
+    	Day[] week = new Day[5];
+    }
+    
+    public static class Day{
+    	
+    	Day(int day) {
+    		if (day == 0) {
+    			this.dayInString = "Monday";
+    		}else if (day == 1) {
+    			this.dayInString = "Tuesday";
+    		}else if (day == 2) {
+    			this.dayInString = "Wednesday";
+    		}else if (day == 3) {
+    			this.dayInString = "Thursday";
+    		}else {
+    			this.dayInString = "Friday";
+    		}
+    	}
+    	
+    	String dayInString;
+    	ArrayList<Lesson> lessons = new ArrayList<Lesson>();
+    }
+    
     public static class Lesson{
     	/**
     	 * @param subject string, the subject this lesson belongs to
@@ -181,7 +330,8 @@ public class TimetableArrangement {
     	
     	String subject;
     	String classtype;
-    	String day;
+    	int day;
+    	String dayInString;
     	Time start;
     	Time end;
     	String location;
@@ -189,15 +339,28 @@ public class TimetableArrangement {
     	Lesson (String subject, String classtype, String day, Time start, Time end, String location){
     		this.subject = subject;
     		this.classtype = classtype;
-    		this.day = day;
     		this.start = start;
     		this.end = end;
+    		this.dayInString = day;
     		this.location = location;
+    		
+    		if (day.equals("Monday")){
+    			this.day = 0;
+    		}else if (day.equals("Tuesday")) {
+    			this.day = 1;
+    		}else if (day.equals("Wednesday")) {
+    			this.day = 2;
+    		}else if (day.equals("Thursday")) {
+    			this.day = 3;
+    		}else{
+    			this.day = 4;
+    		}
     	}
     	
     	public void print_info() {
+    		System.out.print(subject + " ");
     		System.out.print(classtype + " ");
-    		System.out.print(day + " ");
+    		System.out.print(dayInString + " ");
     		System.out.print(start + " ");
     		System.out.print(end + " ");
     		System.out.print(location + "\n");
@@ -206,6 +369,7 @@ public class TimetableArrangement {
     }
     
     public static class Classtype{
+    	boolean isLecture;
     	String type;
     	ArrayList<Lesson> lessons = new ArrayList<Lesson>();
     }

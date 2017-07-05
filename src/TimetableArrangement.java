@@ -163,12 +163,15 @@ public class TimetableArrangement {
     public static void assignLesson(Subject subject, Timetable timetable) {
     	for (int i = 0; i < subject.classtypes.size();i++) {
     		Classtype classtype = subject.classtypes.get(i);
+    		
     		if (!classtype.isLecture) {
-    			for (int j = 0; i < classtype.lessons.size();i++) {
+    			for (int j = 0; j < classtype.lessons.size();j++) {
         			Lesson lesson = classtype.lessons.get(j);
         			if (!lessonClashed(lesson, timetable)) {
+        				System.out.print("Add \t");
+        				lesson.print_info();
         				timetable.week[lesson.day].lessons.add(lesson);
-        				continue;
+        				break;
         			}else {
         				System.out.println("cannot insert" + lesson.subject + " " + lesson.classtype);
         			}
@@ -176,7 +179,6 @@ public class TimetableArrangement {
     		}
     	}
     }
-    
     
     public static void removeClashedLessons (Subject subject, Timetable timetable) {
     	//Take a specific class type as input
@@ -271,6 +273,7 @@ public class TimetableArrangement {
     }
     
     public static void showTimetable(Timetable timetable) {
+    	System.out.println("Now showing the timetable");
     	for(int i = 0; i < timetable.week.length; i++) {
     		Day day = timetable.week[i];
     		for (int j = 0; j < day.lessons.size();j++) {
